@@ -76,7 +76,7 @@ public class SpaceInvadersFX extends Application {
             for (int x = APP_WIDTH/3 - (SPACE*3), j = 0; x < 660 && j < 13; x += SPACE, j++) {
                 if (y < 90) {
                     enemies[i][j] = spawnSmallAlien(x, y);
-                } else if (y < 150) {
+                } else if (y < 200) {
                     enemies[i][j] = spawnMediumAlien(x, y);
                 } else {
                     enemies[i][j] = spawnLargeAlien(x, y);
