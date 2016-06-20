@@ -24,16 +24,20 @@ public class SpaceInvadersFX extends Application {
     private int APP_HEIGHT = 600;
     private int APP_WIDTH = 800;
     private int SPACE = 40;
+    private int coordinateY = 80;
+    private int coordinateX = APP_WIDTH/3 - (SPACE*3);
     private int playerLives = 3;
     private int score = 0;
     private Text playerLivesLabel, scoreLabel, pointsLabel;
     private GraphicsContext gc;
-    private Sprite tank, secondTank, thirdTank;
+    private Sprite tank, secondTank, thirdTank, lastAlien;
     private Canvas gameCanvas;
     private double time = 0.40;
     private boolean GAME_IS_PAUSED = false;
+    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, SHIFTING_DOWN, GAME_OVER;
     private LongValue startNanoTime;
-    private double elapsedTime;
+    private double elapsedTime, pos;
+    private AnimationTimer timer;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -63,11 +67,11 @@ public class SpaceInvadersFX extends Application {
         primaryStage.getScene().setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.UP) {
             } else if (e.getCode() == KeyCode.LEFT) {
-                if (tank.getPositionX() > 50) {
+                if (tank.getPositionX() > 50 && !GAME_IS_PAUSED) {
                     moveTankLeft();
                 }
             } else if (e.getCode() == KeyCode.RIGHT) {
-                if (tank.getPositionX() < APP_WIDTH - 100) {
+                if (tank.getPositionX() < APP_WIDTH - 100 && !GAME_IS_PAUSED) {
                     moveTankRight();
                 }
             } else if (e.getCode() == KeyCode.SPACE) {
@@ -81,8 +85,6 @@ public class SpaceInvadersFX extends Application {
                 tank.setVelocity(0, 0);
             } else if (e.getCode() == KeyCode.RIGHT) {
                 tank.setVelocity(0, 0);
-            } else if (e.getCode() == KeyCode.SPACE) {
-                GAME_IS_PAUSED = !GAME_IS_PAUSED;
             }
         });
         primaryStage.show();
@@ -187,16 +189,26 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void startGame() {
+        SHIFTING_RIGHT = true;
         startNanoTime = new LongValue(System.nanoTime());
-        new AnimationTimer() {
+
+        timer = new AnimationTimer() {
             public void handle(long now) {
                 elapsedTime = (now - startNanoTime.value) / 1000000000.0;
                 startNanoTime.value = now;
 
-                gc.clearRect(0, 100, APP_WIDTH , APP_HEIGHT - 200);
-                gc.clearRect(0, APP_HEIGHT - SPACE, APP_WIDTH , APP_HEIGHT);
+                gc.clearRect(0, 80, APP_WIDTH, APP_HEIGHT - 180);
+                gc.clearRect(0, APP_HEIGHT - SPACE, APP_WIDTH, APP_HEIGHT);
 
-                moveEnemies();
+                lastAlien = getLastAlien();
+                if (lastAlien != null) {
+                    pos = lastAlien.getPositionY();
+                    if (pos >= APP_HEIGHT - 100 - lastAlien.getHeight()) {
+                        timer.stop();
+                    }
+                }
+
+                animateEnemies();
 
                 if (tank.getPositionX() < 50) {
                     tank.setPosition(tank.getPositionX() + 1, tank.getPositionY());
@@ -209,22 +221,69 @@ public class SpaceInvadersFX extends Application {
                 tank.render(gc);
                 tank.update(elapsedTime);
 
-                time += 0.010;
+                if (pos <= 240) {
+                    time += 0.010;
+                } else if (pos <= 280) {
+                    time += 0.015;
+                } else if (pos <= 320) {
+                    time += 0.020;
+                } else if (pos <= 340) {
+                    time += 0.030;
+                } else if (pos <= 400) {
+                    time += 0.035;
+                } else if (pos <= 410) {
+                    time += 0.040;
+                } else {
+                    time += 0.1;
+                }
+
                 if (time >= 0.5 && !GAME_IS_PAUSED) {
+                    if (SHIFTING_RIGHT) {
+                        if (coordinateX < 210) {
+                            if (pos <= 410) {
+                                coordinateX += 10;
+                            } else {
+                                coordinateX += 15;
+                            }
+                        } else {
+                            if (!SHIFTING_LEFT) {
+                                coordinateY += 15;
+                                SHIFTING_LEFT = true;
+                                SHIFTING_RIGHT = false;
+                            }
+                        }
+                    } else if (SHIFTING_LEFT ) {
+                        if (coordinateX > 80) {
+                            if (pos <= 410) {
+                                coordinateX -= 10;
+                            } else {
+                                coordinateX -= 15;
+                            }
+                        } else {
+                            if (!SHIFTING_RIGHT) {
+                                coordinateY += 15;
+                                SHIFTING_RIGHT = true;
+                                SHIFTING_LEFT = false;
+                            }
+
+                        }
+                    }
                     updateCurrentEnemies();
                     time = 0;
                 }
             }
-        }.start();
+        };
+        timer.start();
     }
 
     private void updateCurrentEnemies() {
         currentEnemies = currentEnemies == enemies ? enemiesMoved : enemies;
     }
 
-    private void moveEnemies() {
-        for (int y = 80, i = 0; y < APP_HEIGHT / 2 + SPACE && i < 5; y += SPACE, i++) {
-            for (int x = APP_WIDTH/3 - (SPACE*3), j = 0; x < 660 && j < 13; x += SPACE, j++) {
+    private void animateEnemies() {
+        for (int y = coordinateY, i = 0; y < APP_HEIGHT - 100  && i < 5; y += SPACE, i++) {
+            for (int x = coordinateX, j = 0; x < 700 && j < 13; x += SPACE, j++) {
+                currentEnemies[i][j].setPosition(x, y);
                 if (y < 90) {
                     gc.drawImage(currentEnemies[i][j].getImage(), x, y);
                 } else if (y < 200) {
@@ -236,21 +295,30 @@ public class SpaceInvadersFX extends Application {
         }
     }
 
+    private Sprite getLastAlien() {
+        for (int i = currentEnemies.length - 1; i >= 0; i --) {
+            for (int j = 0; j < currentEnemies[0].length; j++) {
+                if (currentEnemies[i][j] != null) {
+                    return currentEnemies[i][j];
+                }
+            }
+        }
+        return null;
+    }
+
     private void moveTankLeft() {
-        tank.setVelocity(-200, 0);
+        tank.setVelocity(-250, 0);
     }
 
     private void moveTankRight() {
-        tank.setVelocity(200, 0);
+        tank.setVelocity(250, 0);
     }
 
-    public class LongValue
-    {
+    public class LongValue {
         public long value;
 
-        public LongValue(long i)
-        {
-            value = i;
+        public LongValue(long i) {
+            this.value = i;
         }
     }
 
