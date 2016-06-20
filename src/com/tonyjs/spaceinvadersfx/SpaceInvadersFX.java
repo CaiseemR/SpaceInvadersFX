@@ -348,6 +348,8 @@ public class SpaceInvadersFX extends Application {
                     explosionEffect.playClip();
                     score += 100;
                     updateTotalScore();
+                    missiles.clear();
+                    MISSILE_LAUNCHED = false;
                     UFO = null;
                     UFO_SPAWNED = false;
                 }
@@ -379,11 +381,24 @@ public class SpaceInvadersFX extends Application {
             Sprite bomb = alienBombs.get(0);
             bomb.render(gc);
             bomb.update(elapsedTime);
-            if (bomb.getPositionY() >= APP_HEIGHT - SPACE || barrierHit(bomb) || playerHit(bomb)) {
+            if (bomb.getPositionY() >= APP_HEIGHT - SPACE || barrierHit(bomb) ||
+                    playerHit(bomb) || bombsCollide(bomb)) {
                 alienBombs.clear();
                 PLAYER_SHOT = false;
             }
         }
+    }
+
+    private boolean bombsCollide(Sprite bomb) {
+        if (missiles.size() > 0) {
+            if (bomb.intersects(missiles.get(0))) {
+                killEffect.playClip();
+                missiles.clear();
+                MISSILE_LAUNCHED = false;
+                return true;
+            }
+        }
+        return false;
     }
 
     private void updateCurrentEnemies() {
