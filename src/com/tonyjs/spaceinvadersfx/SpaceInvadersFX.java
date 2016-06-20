@@ -225,6 +225,14 @@ public class SpaceInvadersFX extends Application {
                 if (UFO_SPAWNED && UFO.getPositionX() < APP_WIDTH) {
                     UFO.render(gc);
                     UFO.update(elapsedTime);
+                    if (MISSILE_LAUNCHED) {
+                        if (UFO.intersects(missiles.get(0))) {
+                            score += 100;
+                            updateTotalScore();
+                            UFO = null;
+                            UFO_SPAWNED = false;
+                        }
+                    }
                 } else {
                     UFO = null;
                     UFO_SPAWNED = false;
@@ -266,7 +274,7 @@ public class SpaceInvadersFX extends Application {
                 } else if (coordinateY <= 320) {
                     time += 0.070;
                 } else {
-                    time += 0.2;
+                    time += 0.10;
                 }
 
                 if (time >= 0.5 && !GAME_IS_PAUSED) {
@@ -378,6 +386,19 @@ public class SpaceInvadersFX extends Application {
             for (int j = 0; j < currentEnemies[0].length; j++) {
                 if (currentEnemies[i][j] != null) {
                     if (currentEnemies[i][j].intersects(missiles.get(0))) {
+                        System.out.println((int)currentEnemies[i][j].getWidth());
+                        switch ((int)currentEnemies[i][j].getWidth()) {
+                            case 31:
+                                score += 10;
+                                break;
+                            case 28:
+                                score += 20;
+                                break;
+                            case 21:
+                                score += 30;
+                                break;
+                        }
+                        updateTotalScore();
                         currentEnemies[i][j] = null;
                         enemies[i][j] = null;
                         enemiesMoved[i][j] = null;
@@ -387,6 +408,10 @@ public class SpaceInvadersFX extends Application {
             }
         }
         return false;
+    }
+
+    private void updateTotalScore() {
+        pointsLabel.setText(Integer.toString(score));
     }
 
     public class LongValue {
