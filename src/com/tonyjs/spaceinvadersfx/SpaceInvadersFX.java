@@ -13,7 +13,6 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /**
@@ -24,6 +23,7 @@ public class SpaceInvadersFX extends Application {
     private Sprite[][] enemiesMoved = new Sprite[5][13];
     private Sprite[][] currentEnemies;
     private Sprite[] barriers = new Sprite[4];
+    private int[] coordinates = new int[]{80, 95, 120, 140, 200, 260, 300, 320, 340};
     private int SCENE_WIDTH = 600;
     private int APP_HEIGHT = 600;
     private int APP_WIDTH = 800;
@@ -237,19 +237,16 @@ public class SpaceInvadersFX extends Application {
 
                 lastAlien = getLastAlien();
 
-                getLastAlienStatus();
+                checkLastAlienStatus();
                 animateEnemies();
-                getUFOStatus();
-                getMissileStatus();
-                getBombStatus();
-                getTankStatus();
+                tryToSpawnUFO();
+                checkUFOStatus();
+                checkMissileStatus();
+                checkBombStatus();
+                checkTankStatus();
 
                 int timeDiff = updateTime();
-                if (timeDiff >= 0) {
-                    time += 0.010 + (.005 * timeDiff);
-                } else {
-                    time += 0.12;
-                }
+                time += timeDiff >= 0 ? 0.010 + (.005 * timeDiff) : 0.12;
 
                 if (time >= 0.5) {
                     playMoveEffect();
@@ -301,7 +298,6 @@ public class SpaceInvadersFX extends Application {
     }
 
     private int updateTime() {
-        int[] coordinates = new int[]{80, 95, 120, 140, 200, 260, 300, 320, 340};
         for (int i = 0; i < coordinates.length; i++) {
             if (coordinateY <= coordinates[i]) {
                 return i;
@@ -310,7 +306,7 @@ public class SpaceInvadersFX extends Application {
         return -1;
     }
 
-    private void getLastAlienStatus() {
+    private void checkLastAlienStatus() {
         if (lastAlien != null) {
             pos = lastAlien.getPositionY();
             if (pos >= APP_HEIGHT - 100 - lastAlien.getHeight()) {
@@ -323,7 +319,7 @@ public class SpaceInvadersFX extends Application {
         }
     }
 
-    private void getTankStatus() {
+    private void checkTankStatus() {
         if (tank.getPositionX() < 50) {
             tank.setPosition(tank.getPositionX() + 1, tank.getPositionY());
             tank.setVelocity(0, 0);
@@ -336,12 +332,14 @@ public class SpaceInvadersFX extends Application {
         tank.update(elapsedTime);
     }
 
-    private void getUFOStatus() {
+    private void tryToSpawnUFO() {
         if (!UFO_SPAWNED && spawnRandomUFO()) {
             UFO_SPAWNED = true;
             UFO.setVelocity(170, 0);
         }
+    }
 
+    private void checkUFOStatus() {
         if (UFO_SPAWNED && UFO.getPositionX() < APP_WIDTH) {
             UFO.render(gc);
             UFO.update(elapsedTime);
@@ -360,12 +358,12 @@ public class SpaceInvadersFX extends Application {
         }
     }
 
-    private void getMissileStatus() {
+    private void checkMissileStatus() {
         if (MISSILE_LAUNCHED) {
             Sprite missile = missiles.get(0);
             missile.render(gc);
             missile.update(elapsedTime);
-            if (missile.getPositionY() <= 30 || missileHit() || barrierHit(missile)) {
+            if (missileHit() || missile.getPositionY() <= 30 || barrierHit(missile)) {
                 missiles.clear();
                 MISSILE_LAUNCHED = false;
                 if (totalEnemies == 0) {
@@ -376,12 +374,12 @@ public class SpaceInvadersFX extends Application {
         }
     }
 
-    private void getBombStatus() {
+    private void checkBombStatus() {
         if (PLAYER_SHOT) {
             Sprite bomb = alienBombs.get(0);
             bomb.render(gc);
             bomb.update(elapsedTime);
-            if (bomb.getPositionY() >= APP_HEIGHT || barrierHit(bomb) || playerHit(bomb)) {
+            if (bomb.getPositionY() >= APP_HEIGHT - SPACE || barrierHit(bomb) || playerHit(bomb)) {
                 alienBombs.clear();
                 PLAYER_SHOT = false;
             }
@@ -509,7 +507,6 @@ public class SpaceInvadersFX extends Application {
             }
         }
         alienBomb.setVelocity(0, 350);
-        alienBomb.render(gc);
         alienBombs.add(alienBomb);
     }
 
