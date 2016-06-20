@@ -13,6 +13,7 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /**
@@ -22,6 +23,7 @@ public class SpaceInvadersFX extends Application {
     private Sprite[][] enemies = new Sprite[5][13];
     private Sprite[][] enemiesMoved = new Sprite[5][13];
     private Sprite[][] currentEnemies;
+    private Sprite[] barriers = new Sprite[4];
     private int SCENE_WIDTH = 600;
     private int APP_HEIGHT = 600;
     private int APP_WIDTH = 800;
@@ -30,18 +32,25 @@ public class SpaceInvadersFX extends Application {
     private int coordinateX = APP_WIDTH/3 - (SPACE*3);
     private int playerLives = 3;
     private int score = 0;
+    private int totalEnemies;
+    private int currentMoveSound = 0;
     private Text playerLivesLabel, scoreLabel, pointsLabel;
     private GraphicsContext gc;
     private Sprite tank, secondTank, thirdTank, lastAlien, UFO;
     private ArrayList<Sprite> missiles = new ArrayList<>();
+    private ArrayList<Sprite> alienBombs = new ArrayList<>();
+    private ArrayList<SoundEffect> moveEffects;
     private Canvas gameCanvas;
     private double time = 0.40;
+    private double ufoTime = 0.40;
     private boolean GAME_IS_PAUSED = false;
-    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, SHIFTING_DOWN,
-            GAME_OVER, UFO_SPAWNED, MISSILE_LAUNCHED;
+    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, SHIFTING_DOWN, PLAYER_SHOT,
+            GAME_OVER, GAME_IS_WON, LIFE_END, UFO_SPAWNED, MISSILE_LAUNCHED;
     private LongValue startNanoTime;
     private double elapsedTime, pos;
     private AnimationTimer timer;
+    private SoundEffect ufoEffect, alienMoveEffect,
+            shootEffect, killEffect, explosionEffect;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -63,6 +72,7 @@ public class SpaceInvadersFX extends Application {
         updateCurrentEnemies();
         setBarriers();
         setPlayer();
+        setSoundEffects();
         startGame();
 
         root.getChildren().addAll(gameCanvas, scoreLabel, pointsLabel, playerLivesLabel);
@@ -80,11 +90,22 @@ public class SpaceInvadersFX extends Application {
                 }
             } else if (e.getCode() == KeyCode.SPACE) {
                 GAME_IS_PAUSED = !GAME_IS_PAUSED;
+                if (GAME_IS_PAUSED) {
+                    timer.stop();
+                } else {
+                    timer.start();
+                }
+            } else if (LIFE_END && e.getCode() == KeyCode.ENTER) {
+
+                updatePlayerLives();
+                resetGameVariables();
+                startGame();
             }
         });
 
         primaryStage.getScene().setOnKeyReleased(e -> {
             if (e.getCode() == KeyCode.UP && !MISSILE_LAUNCHED) {
+                shootEffect.playClip();
                 shootMissile();
                 MISSILE_LAUNCHED = true;
             } else if (e.getCode() == KeyCode.LEFT) {
@@ -129,6 +150,7 @@ public class SpaceInvadersFX extends Application {
                     enemies[i][j] = spawnLargeAlien(x, y, "/images/large_invader_a.png");
                     gc.drawImage(enemies[i][j].getImage(), x, y);
                 }
+                totalEnemies++;
             }
         }
     }
@@ -169,10 +191,16 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void setBarriers() {
-        for (int x = 180; x < SCENE_WIDTH; x += 3*SPACE) {
+        for (int x = 180, i = 0; x < SCENE_WIDTH; x += 3*SPACE, i++) {
             Sprite barrier = new Sprite();
             barrier.setImage("/images/barrier.png");
             barrier.setPosition(x, APP_HEIGHT - 100);
+            barriers[i] = barrier;
+        }
+    }
+
+    private void renderBarriers() {
+        for(Sprite barrier : barriers) {
             barrier.render(gc);
         }
     }
@@ -205,12 +233,16 @@ public class SpaceInvadersFX extends Application {
 
                 gc.clearRect(0, 30, APP_WIDTH, APP_HEIGHT);
 
-                setBarriers();
+                renderBarriers();
 
                 lastAlien = getLastAlien();
                 if (lastAlien != null) {
                     pos = lastAlien.getPositionY();
                     if (pos >= APP_HEIGHT - 100 - lastAlien.getHeight()) {
+                        LIFE_END = true;
+                        MISSILE_LAUNCHED = false;
+                        missiles.clear();
+                        UFO = null;
                         timer.stop();
                     }
                 }
@@ -219,7 +251,7 @@ public class SpaceInvadersFX extends Application {
 
                 if (!UFO_SPAWNED && spawnRandomUFO()) {
                     UFO_SPAWNED = true;
-                    UFO.setVelocity(150, 0);
+                    UFO.setVelocity(170, 0);
                 }
 
                 if (UFO_SPAWNED && UFO.getPositionX() < APP_WIDTH) {
@@ -227,6 +259,7 @@ public class SpaceInvadersFX extends Application {
                     UFO.update(elapsedTime);
                     if (MISSILE_LAUNCHED) {
                         if (UFO.intersects(missiles.get(0))) {
+                            explosionEffect.playClip();
                             score += 100;
                             updateTotalScore();
                             UFO = null;
@@ -239,12 +272,26 @@ public class SpaceInvadersFX extends Application {
                 }
 
                 if (MISSILE_LAUNCHED) {
-                    if (missiles.get(0).getPositionY() <= 30 || missileHit()) {
+                    Sprite missile = missiles.get(0);
+                    missile.render(gc);
+                    missile.update(elapsedTime);
+                    if (missile.getPositionY() <= 30 || missileHit() || barrierHit(missile)) {
                         missiles.clear();
                         MISSILE_LAUNCHED = false;
-                    } else {
-                        missiles.get(0).render(gc);
-                        missiles.get(0).update(elapsedTime);
+                        if (totalEnemies == 0) {
+                            GAME_IS_WON = true;
+                            System.exit(0);
+                        }
+                    }
+                }
+
+                if (PLAYER_SHOT) {
+                    Sprite bomb = alienBombs.get(0);
+                    bomb.render(gc);
+                    bomb.update(elapsedTime);
+                    if (bomb.getPositionY() >= APP_HEIGHT || barrierHit(bomb) || playerHit(bomb)) {
+                        alienBombs.clear();
+                        PLAYER_SHOT = false;
                     }
                 }
 
@@ -264,20 +311,25 @@ public class SpaceInvadersFX extends Application {
                 } else if (coordinateY <= 95) {
                     time += 0.015;
                 } else if (coordinateY <= 120) {
-                    time += 0.030;
+                    time += 0.020;
                 } else if (coordinateY <= 140) {
-                    time += 0.040;
+                    time += 0.025;
                 } else if (coordinateY <= 200) {
-                    time += 0.050;
+                    time += 0.030;
                 } else if (coordinateY <= 260) {
-                    time += 0.060;
+                    time += 0.035;
+                } else if (coordinateY <= 300) {
+                    time += 0.040;
                 } else if (coordinateY <= 320) {
-                    time += 0.070;
+                    time += 0.045;
+                } else if (coordinateY <= 340) {
+                    time += 0.050;
                 } else {
-                    time += 0.10;
+                    time += 0.12;
                 }
 
-                if (time >= 0.5 && !GAME_IS_PAUSED) {
+                if (time >= 0.5) {
+                    playMoveEffect();
                     if (SHIFTING_RIGHT) {
                         if (coordinateX < 210) {
                             if (coordinateY <= 320) {
@@ -309,7 +361,16 @@ public class SpaceInvadersFX extends Application {
                         }
                     }
                     updateCurrentEnemies();
+                    shootPlayer();
                     time = 0;
+                }
+
+                if (UFO_SPAWNED) {
+                    ufoTime += 0.008;
+                    if (ufoTime >= 0.084) {
+                        ufoEffect.playClip();
+                        ufoTime = 0;
+                    }
                 }
             }
         };
@@ -350,7 +411,7 @@ public class SpaceInvadersFX extends Application {
 
     private boolean spawnRandomUFO() {
         double random = Math.random();
-        if (random < 0.0005) {
+        if (random < 0.0003) {
             spawnUFO();
             return true;
         }
@@ -374,7 +435,7 @@ public class SpaceInvadersFX extends Application {
 
     private void shootMissile() {
         Sprite missile = new Sprite();
-        missile.setImage("/images/missile.png");
+        missile.setImage("/images/rocket.png");
         missile.setPosition(tank.getPositionX() + 10, tank.getPositionY() - 20);
         missile.setVelocity(0, -350);
         missile.render(gc);
@@ -386,7 +447,6 @@ public class SpaceInvadersFX extends Application {
             for (int j = 0; j < currentEnemies[0].length; j++) {
                 if (currentEnemies[i][j] != null) {
                     if (currentEnemies[i][j].intersects(missiles.get(0))) {
-                        System.out.println((int)currentEnemies[i][j].getWidth());
                         switch ((int)currentEnemies[i][j].getWidth()) {
                             case 31:
                                 score += 10;
@@ -398,7 +458,9 @@ public class SpaceInvadersFX extends Application {
                                 score += 30;
                                 break;
                         }
+                        killEffect.playClip();
                         updateTotalScore();
+                        totalEnemies--;
                         currentEnemies[i][j] = null;
                         enemies[i][j] = null;
                         enemiesMoved[i][j] = null;
@@ -410,8 +472,90 @@ public class SpaceInvadersFX extends Application {
         return false;
     }
 
+    private boolean barrierHit(Sprite ammo) {
+        for (Sprite barrier : barriers) {
+            if (barrier.intersects(ammo)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void shootPlayer() {
+        Sprite alienBomb = new Sprite();
+        alienBomb.setImage("/images/laser.png");
+        for (int i = (int)(Math.random() * currentEnemies.length - 1); i >= 0; i--) {
+            if (PLAYER_SHOT) {
+                break;
+            }
+            for (int j = (int)(Math.random() * currentEnemies[i].length - 1); j >= 0; j--) {
+                if (currentEnemies[i][j] != null) {
+                    alienBomb.setPosition(currentEnemies[i][j].getPositionX(),
+                            currentEnemies[i][j].getPositionY());
+                    PLAYER_SHOT = true;
+                    break;
+                }
+            }
+        }
+        alienBomb.setVelocity(0, 350);
+        alienBomb.render(gc);
+        alienBombs.add(alienBomb);
+    }
+
+    private boolean playerHit(Sprite bomb) {
+        if (tank.intersects(bomb)) {
+            explosionEffect.playClip();
+            LIFE_END = true;
+            return true;
+        }
+        return false;
+    }
+
     private void updateTotalScore() {
         pointsLabel.setText(Integer.toString(score));
+    }
+
+    private void updatePlayerLives() {
+        playerLives--;
+        if (playerLives == 2 && LIFE_END) {
+            gc.clearRect(SCENE_WIDTH + 4 * SPACE, 10, APP_WIDTH, 20);
+        } else if (playerLives == 1 && LIFE_END) {
+            gc.clearRect(SCENE_WIDTH + 3 * SPACE, 10, APP_WIDTH, 20);
+        }
+    }
+
+    private void resetGameVariables() {
+        time = 0;
+        coordinateY = 80;
+        coordinateX = APP_WIDTH/3 - (SPACE*3);
+        LIFE_END = false;
+        SHIFTING_DOWN = false;
+        SHIFTING_LEFT = false;
+    }
+
+    private void setSoundEffects() {
+        shootEffect = new SoundEffect("/sounds/shoot.wav");
+        killEffect = new SoundEffect("/sounds/alienKilled.wav");
+        ufoEffect = new SoundEffect("/sounds/ufo.wav");
+        explosionEffect = new SoundEffect("/sounds/explosion.wav");
+        setAlienMoveSounds();
+    }
+
+    private void setAlienMoveSounds() {
+        moveEffects = new ArrayList<>();
+        moveEffects.add(new SoundEffect("/sounds/alienMove.wav"));
+        moveEffects.add(new SoundEffect("/sounds/alienMove2.wav"));
+        moveEffects.add(new SoundEffect("/sounds/alienMove3.wav"));
+        moveEffects.add(new SoundEffect("/sounds/alienMove4.wav"));
+    }
+
+    private void playMoveEffect() {
+        if (currentMoveSound == moveEffects.size()) {
+            currentMoveSound = 0;
+        }
+
+        moveEffects.get(currentMoveSound).playClip();
+        currentMoveSound++;
     }
 
     public class LongValue {
