@@ -13,6 +13,8 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+import java.util.ArrayList;
+
 /**
  * Created by tonysaavedra on 6/17/16.
  */
@@ -31,10 +33,12 @@ public class SpaceInvadersFX extends Application {
     private Text playerLivesLabel, scoreLabel, pointsLabel;
     private GraphicsContext gc;
     private Sprite tank, secondTank, thirdTank, lastAlien, UFO;
+    private ArrayList<Sprite> missiles = new ArrayList<>();
     private Canvas gameCanvas;
     private double time = 0.40;
     private boolean GAME_IS_PAUSED = false;
-    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, SHIFTING_DOWN, GAME_OVER, UFO_SPAWNED;
+    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, SHIFTING_DOWN,
+            GAME_OVER, UFO_SPAWNED, MISSILE_LAUNCHED;
     private LongValue startNanoTime;
     private double elapsedTime, pos;
     private AnimationTimer timer;
@@ -80,7 +84,9 @@ public class SpaceInvadersFX extends Application {
         });
 
         primaryStage.getScene().setOnKeyReleased(e -> {
-            if (e.getCode() == KeyCode.UP) {
+            if (e.getCode() == KeyCode.UP && !MISSILE_LAUNCHED) {
+                shootMissile();
+                MISSILE_LAUNCHED = true;
             } else if (e.getCode() == KeyCode.LEFT) {
                 tank.setVelocity(0, 0);
             } else if (e.getCode() == KeyCode.RIGHT) {
@@ -197,8 +203,9 @@ public class SpaceInvadersFX extends Application {
                 elapsedTime = (now - startNanoTime.value) / 1000000000.0;
                 startNanoTime.value = now;
 
-                gc.clearRect(0, 40, APP_WIDTH, APP_HEIGHT - 140);
-                gc.clearRect(0, APP_HEIGHT - SPACE, APP_WIDTH, APP_HEIGHT);
+                gc.clearRect(0, 30, APP_WIDTH, APP_HEIGHT);
+
+                setBarriers();
 
                 lastAlien = getLastAlien();
                 if (lastAlien != null) {
@@ -223,6 +230,16 @@ public class SpaceInvadersFX extends Application {
                     UFO_SPAWNED = false;
                 }
 
+                if (MISSILE_LAUNCHED) {
+                    if (missiles.get(0).getPositionY() <= 30 || missileHit()) {
+                        missiles.clear();
+                        MISSILE_LAUNCHED = false;
+                    } else {
+                        missiles.get(0).render(gc);
+                        missiles.get(0).update(elapsedTime);
+                    }
+                }
+
                 if (tank.getPositionX() < 50) {
                     tank.setPosition(tank.getPositionX() + 1, tank.getPositionY());
                     tank.setVelocity(0, 0);
@@ -234,29 +251,31 @@ public class SpaceInvadersFX extends Application {
                 tank.render(gc);
                 tank.update(elapsedTime);
 
-                if (pos <= 240) {
+                if (coordinateY <= 80) {
                     time += 0.010;
-                } else if (pos <= 280) {
+                } else if (coordinateY <= 95) {
                     time += 0.015;
-                } else if (pos <= 320) {
-                    time += 0.020;
-                } else if (pos <= 340) {
+                } else if (coordinateY <= 120) {
                     time += 0.030;
-                } else if (pos <= 400) {
-                    time += 0.035;
-                } else if (pos <= 410) {
+                } else if (coordinateY <= 140) {
                     time += 0.040;
+                } else if (coordinateY <= 200) {
+                    time += 0.050;
+                } else if (coordinateY <= 260) {
+                    time += 0.060;
+                } else if (coordinateY <= 320) {
+                    time += 0.070;
                 } else {
-                    time += 0.1;
+                    time += 0.2;
                 }
 
                 if (time >= 0.5 && !GAME_IS_PAUSED) {
                     if (SHIFTING_RIGHT) {
                         if (coordinateX < 210) {
-                            if (pos <= 410) {
+                            if (coordinateY <= 320) {
                                 coordinateX += 10;
                             } else {
-                                coordinateX += 15;
+                                coordinateX += 20;
                             }
                         } else {
                             if (!SHIFTING_LEFT) {
@@ -267,10 +286,10 @@ public class SpaceInvadersFX extends Application {
                         }
                     } else if (SHIFTING_LEFT ) {
                         if (coordinateX > 80) {
-                            if (pos <= 410) {
+                            if (coordinateY <= 320) {
                                 coordinateX -= 10;
                             } else {
-                                coordinateX -= 15;
+                                coordinateX -= 20;
                             }
                         } else {
                             if (!SHIFTING_RIGHT) {
@@ -296,13 +315,15 @@ public class SpaceInvadersFX extends Application {
     private void animateEnemies() {
         for (int y = coordinateY, i = 0; y < APP_HEIGHT - 100  && i < 5; y += SPACE, i++) {
             for (int x = coordinateX, j = 0; x < 700 && j < 13; x += SPACE, j++) {
-                currentEnemies[i][j].setPosition(x, y);
-                if (y < 90) {
-                    gc.drawImage(currentEnemies[i][j].getImage(), x, y);
-                } else if (y < 200) {
-                    gc.drawImage(currentEnemies[i][j].getImage(), x, y);
-                } else {
-                    gc.drawImage(currentEnemies[i][j].getImage(), x, y);
+                if (currentEnemies[i][j] != null) {
+                    currentEnemies[i][j].setPosition(x, y);
+                    if (y < 90) {
+                        gc.drawImage(currentEnemies[i][j].getImage(), x, y);
+                    } else if (y < 200) {
+                        gc.drawImage(currentEnemies[i][j].getImage(), x, y);
+                    } else {
+                        gc.drawImage(currentEnemies[i][j].getImage(), x, y);
+                    }
                 }
             }
         }
@@ -341,6 +362,31 @@ public class SpaceInvadersFX extends Application {
 
     private void moveTankRight() {
         tank.setVelocity(250, 0);
+    }
+
+    private void shootMissile() {
+        Sprite missile = new Sprite();
+        missile.setImage("/images/missile.png");
+        missile.setPosition(tank.getPositionX() + 10, tank.getPositionY() - 20);
+        missile.setVelocity(0, -350);
+        missile.render(gc);
+        missiles.add(missile);
+    }
+
+    private boolean missileHit() {
+        for (int i = 0; i < currentEnemies.length; i++) {
+            for (int j = 0; j < currentEnemies[0].length; j++) {
+                if (currentEnemies[i][j] != null) {
+                    if (currentEnemies[i][j].intersects(missiles.get(0))) {
+                        currentEnemies[i][j] = null;
+                        enemies[i][j] = null;
+                        enemiesMoved[i][j] = null;
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public class LongValue {

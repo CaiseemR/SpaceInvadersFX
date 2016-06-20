@@ -83,7 +83,7 @@ public class Sprite {
     }
 
     public boolean intersects(Sprite s) {
-        return s.getBoundary().intersects( this.getBoundary() );
+        return s.getBoundary().intersects(this.getBoundary());
     }
 
 }
