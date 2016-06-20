@@ -35,6 +35,18 @@ public class Sprite {
         setImage(toReturn);
     }
 
+    public Image getImage() {
+        return image;
+    }
+
+    public double getPositionX() {
+        return positionX;
+    }
+
+    public double getPositionY() {
+        return positionY;
+    }
+
     public double getWidth() {
         return width;
     }
