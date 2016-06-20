@@ -30,11 +30,11 @@ public class SpaceInvadersFX extends Application {
     private int score = 0;
     private Text playerLivesLabel, scoreLabel, pointsLabel;
     private GraphicsContext gc;
-    private Sprite tank, secondTank, thirdTank, lastAlien;
+    private Sprite tank, secondTank, thirdTank, lastAlien, UFO;
     private Canvas gameCanvas;
     private double time = 0.40;
     private boolean GAME_IS_PAUSED = false;
-    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, SHIFTING_DOWN, GAME_OVER;
+    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, SHIFTING_DOWN, GAME_OVER, UFO_SPAWNED;
     private LongValue startNanoTime;
     private double elapsedTime, pos;
     private AnimationTimer timer;
@@ -197,7 +197,7 @@ public class SpaceInvadersFX extends Application {
                 elapsedTime = (now - startNanoTime.value) / 1000000000.0;
                 startNanoTime.value = now;
 
-                gc.clearRect(0, 80, APP_WIDTH, APP_HEIGHT - 180);
+                gc.clearRect(0, 40, APP_WIDTH, APP_HEIGHT - 140);
                 gc.clearRect(0, APP_HEIGHT - SPACE, APP_WIDTH, APP_HEIGHT);
 
                 lastAlien = getLastAlien();
@@ -209,6 +209,19 @@ public class SpaceInvadersFX extends Application {
                 }
 
                 animateEnemies();
+
+                if (!UFO_SPAWNED && spawnRandomUFO()) {
+                    UFO_SPAWNED = true;
+                    UFO.setVelocity(150, 0);
+                }
+
+                if (UFO_SPAWNED && UFO.getPositionX() < APP_WIDTH) {
+                    UFO.render(gc);
+                    UFO.update(elapsedTime);
+                } else {
+                    UFO = null;
+                    UFO_SPAWNED = false;
+                }
 
                 if (tank.getPositionX() < 50) {
                     tank.setPosition(tank.getPositionX() + 1, tank.getPositionY());
@@ -304,6 +317,22 @@ public class SpaceInvadersFX extends Application {
             }
         }
         return null;
+    }
+
+    private boolean spawnRandomUFO() {
+        double random = Math.random();
+        if (random < 0.0005) {
+            spawnUFO();
+            return true;
+        }
+        return false;
+    }
+
+    private void spawnUFO() {
+        UFO = new Sprite();
+        UFO.setImage("/images/ufo.png");
+        UFO.setPosition(0, 40);
+        UFO.render(gc);
     }
 
     private void moveTankLeft() {
