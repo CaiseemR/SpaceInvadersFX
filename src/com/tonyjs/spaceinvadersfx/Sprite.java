@@ -31,13 +31,13 @@ public class Sprite {
     }
 
     public void setImage(String filename) {
-        Image i = new Image(filename);
+        Image i = new Image(getClass().getResource(filename).toExternalForm());
         Image toReturn = new Image(filename, i.getWidth()/3, i.getHeight()/3, true, false);
         setImage(toReturn);
     }
 
     public void setImage(boolean gif, String filename) {
-        ImageView i = new ImageView(new Image(filename));
+        ImageView i = new ImageView(new Image(getClass().getResource(filename).toExternalForm()));
         Image toReturn = new Image(filename);
         setImage(toReturn);
     }

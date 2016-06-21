@@ -8,6 +8,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
@@ -22,8 +23,7 @@ public class SpaceInvadersFX extends Application {
     private Sprite[][] enemies = new Sprite[5][13];
     private Sprite[][] enemiesMoved = new Sprite[5][13];
     private Sprite[][] currentEnemies;
-    private Sprite[] barriers = new Sprite[4];
-    private int[] coordinates = new int[]{80, 95, 120, 140, 200, 260, 300, 320, 340};
+    private int[] coordinates = new int[]{80, 95, 120, 180, 200, 250, 280, 310, 340};
     private int SCENE_WIDTH = 600;
     private int APP_HEIGHT = 600;
     private int APP_WIDTH = 800;
@@ -34,22 +34,25 @@ public class SpaceInvadersFX extends Application {
     private int score = 0;
     private int totalEnemies;
     private int currentMoveSound = 0;
+    private int rectangleSize = 8;
+    private double time = 0.40;
+    private double ufoTime = 0.40;
+    private double elapsedTime, explosionTime, lastAlienPosY;
     private Text playerLivesLabel, scoreLabel, pointsLabel;
     private GraphicsContext gc;
     private Sprite tank, secondTank, thirdTank, lastAlien, UFO, explosion;
-    private ArrayList<Sprite> missiles = new ArrayList<>();
-    private ArrayList<Sprite> alienBombs = new ArrayList<>();
-    private ArrayList<SoundEffect> moveEffects;
     private Canvas gameCanvas;
-    private double time = 0.40;
-    private double ufoTime = 0.40;
-    private boolean GAME_IS_PAUSED = false;
-    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, SHIFTING_DOWN, PLAYER_SHOT,
-            GAME_OVER, GAME_IS_WON, LIFE_END, UFO_SPAWNED, MISSILE_LAUNCHED, EXPLOSION;
     private LongValue startNanoTime;
-    private double elapsedTime, explosionTime, pos;
     private AnimationTimer timer;
     private SoundEffect ufoEffect, shootEffect, killEffect, explosionEffect;
+    private Group barrierGroup, secondBarrier, thirdBarrier, fourthBarrier;
+    private ArrayList<Barrier> barriers = new ArrayList<>();
+    private ArrayList<Sprite> missiles = new ArrayList<>();
+    private ArrayList<Sprite> alienBombs = new ArrayList<>();
+    private ArrayList<SoundEffect> moveEffects = new ArrayList<>();
+    private boolean GAME_IS_PAUSED = false;
+    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, PLAYER_SHOT, GAME_OVER,
+            GAME_IS_WON, LIFE_END, UFO_SPAWNED, MISSILE_LAUNCHED, EXPLOSION;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -74,12 +77,12 @@ public class SpaceInvadersFX extends Application {
         setSoundEffects();
         startGame();
 
-        root.getChildren().addAll(gameCanvas, scoreLabel, pointsLabel, playerLivesLabel);
+        root.getChildren().addAll(gameCanvas, scoreLabel, pointsLabel, playerLivesLabel,
+                barrierGroup, secondBarrier, thirdBarrier, fourthBarrier);
 
         primaryStage.setScene(mainScene);
         primaryStage.getScene().setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.UP) {
-            } else if (e.getCode() == KeyCode.LEFT) {
+            if (e.getCode() == KeyCode.LEFT) {
                 if (tank.getPositionX() > 50 && !GAME_IS_PAUSED) {
                     moveTankLeft();
                 }
@@ -94,11 +97,6 @@ public class SpaceInvadersFX extends Application {
                 } else {
                     timer.start();
                 }
-            } else if (LIFE_END && e.getCode() == KeyCode.ENTER) {
-
-                updatePlayerLives();
-                resetGameVariables();
-                startGame();
             }
         });
 
@@ -190,17 +188,36 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void setBarriers() {
+        barrierGroup = new Group();
+        secondBarrier = new Group();
+        thirdBarrier = new Group();
+        fourthBarrier = new Group();
+
         for (int x = 180, i = 0; x < SCENE_WIDTH; x += 3*SPACE, i++) {
-            Sprite barrier = new Sprite();
-            barrier.setImage("/images/barrier.png");
-            barrier.setPosition(x, APP_HEIGHT - 100);
-            barriers[i] = barrier;
+            Barrier barrier = new Barrier();
+            int[][] barrierMatrix = barrier.getBarrier();
+            Group group = getBarrierGroup(x);
+            renderBarrier(x, barrier, barrierMatrix, group);
         }
     }
 
-    private void renderBarriers() {
-        for(Sprite barrier : barriers) {
-            barrier.render(gc);
+    private void renderBarrier(int startingX, Barrier barrier, int[][] barrierMatrix, Group group) {
+        barrier.setLocationX(startingX);
+        barrier.setLocationY(APP_HEIGHT-100);
+        barriers.add(barrier);
+        group.getChildren().clear();
+
+        for (int i = 0, y = APP_HEIGHT - 100; i < barrierMatrix.length; i++, y += rectangleSize) {
+            for (int j = 0, x = startingX; j < barrierMatrix[0].length && x <= SCENE_WIDTH + SPACE; j++, x += rectangleSize) {
+                if (barrierMatrix[i][j] != 0) {
+                    Rectangle rect = new Rectangle();
+                    rect.setFill(barrier.getColor());
+                    rect.setWidth(rectangleSize);
+                    rect.setHeight(rectangleSize);
+                    rect.relocate(x, y);
+                    group.getChildren().add(rect);
+                }
+            }
         }
     }
 
@@ -232,12 +249,11 @@ public class SpaceInvadersFX extends Application {
 
                 gc.clearRect(0, 30, APP_WIDTH, APP_HEIGHT);
 
-                renderBarriers();
                 if (explosion != null) {
                     explosion.render(gc);
                 }
-                lastAlien = getLastAlien();
 
+                lastAlien = getLastAlien();
                 checkLastAlienStatus();
                 animateEnemies();
                 tryToSpawnUFO();
@@ -247,7 +263,7 @@ public class SpaceInvadersFX extends Application {
                 checkTankStatus();
 
                 int timeDiff = updateTime();
-                time += timeDiff >= 0 ? 0.010 + (.005 * timeDiff) : 0.12;
+                time += timeDiff >= 0 ? 0.010 + (.005 * timeDiff) : 0.10;
 
                 if (time >= 0.5) {
                     playMoveEffect();
@@ -296,8 +312,8 @@ public class SpaceInvadersFX extends Application {
                 }
 
                 if (UFO_SPAWNED) {
-                    ufoTime += 0.008;
-                    if (ufoTime >= 0.084) {
+                    ufoTime += 0.010;
+                    if (ufoTime >= 0.10) {
                         ufoEffect.playClip();
                         ufoTime = 0;
                     }
@@ -318,13 +334,9 @@ public class SpaceInvadersFX extends Application {
 
     private void checkLastAlienStatus() {
         if (lastAlien != null) {
-            pos = lastAlien.getPositionY();
-            if (pos >= APP_HEIGHT - 100 - lastAlien.getHeight()) {
-                LIFE_END = true;
-                MISSILE_LAUNCHED = false;
-                missiles.clear();
-                UFO = null;
-                timer.stop();
+            lastAlienPosY = lastAlien.getPositionY();
+            if (lastAlienPosY >= APP_HEIGHT - 100 - lastAlien.getHeight()) {
+                restartGame();
             }
         }
     }
@@ -381,7 +393,8 @@ public class SpaceInvadersFX extends Application {
                 MISSILE_LAUNCHED = false;
                 if (totalEnemies == 0) {
                     GAME_IS_WON = true;
-                    System.exit(0);
+                    timer.stop();
+                    startNewGame();
                 }
             }
         }
@@ -392,10 +405,18 @@ public class SpaceInvadersFX extends Application {
             Sprite bomb = alienBombs.get(0);
             bomb.render(gc);
             bomb.update(elapsedTime);
-            if (bomb.getPositionY() >= APP_HEIGHT - SPACE || barrierHit(bomb) ||
-                    playerHit(bomb) || bombsCollide(bomb)) {
+            if (bomb.getPositionY() >= APP_HEIGHT - SPACE ||
+                    barrierHit(bomb) || bombsCollide(bomb)) {
                 alienBombs.clear();
                 PLAYER_SHOT = false;
+            }
+            if (playerHit(bomb)) {
+                timer.stop();
+                if (playerLives > 1) {
+                    restartGame();
+                } else {
+                    System.exit(0);
+                }
             }
         }
     }
@@ -511,12 +532,37 @@ public class SpaceInvadersFX extends Application {
     }
 
     private boolean barrierHit(Sprite ammo) {
-        for (Sprite barrier : barriers) {
-            if (barrier.intersects(ammo)) {
-                return true;
+        for (Barrier barrier : barriers) {
+            int[][] matrix = barrier.getBarrier();
+            for (int row = 0; row < matrix.length; row++) {
+                for (int j = 0; j < matrix[0].length; j++) {
+                    if (matrix[row][j] != 0) {
+                        if (ammo.getPositionX() >= barrier.getLocationX() - 5 &&
+                                ammo.getPositionX() <= barrier.getLocationX() + j * rectangleSize + 5 &&
+                                ammo.getPositionY() >= barrier.getLocationY() - 5 &&
+                                ammo.getPositionY() <= barrier.getLocationY() + row * rectangleSize + 5) {
+                            barrier.deleteBricksAround(row, j);
+                            Group group = getBarrierGroup((int)barrier.getLocationX());
+                            renderBarrier((int)(barrier.getLocationX()), barrier, matrix, group);
+                            return true;
+                        }
+                    }
+                }
             }
         }
         return false;
+    }
+
+    private Group getBarrierGroup(int x) {
+        if (x <= 180) {
+            return barrierGroup;
+        } else if (x <= 300) {
+            return secondBarrier;
+        } else if (x <= 420) {
+            return thirdBarrier;
+        } else {
+            return fourthBarrier;
+        }
     }
 
     private void shootPlayer() {
@@ -526,17 +572,17 @@ public class SpaceInvadersFX extends Application {
             if (PLAYER_SHOT) {
                 break;
             }
-            for (int j = (int)(Math.random() * currentEnemies[i].length - 1); j >= 0; j--) {
+            for (int j = (int)(Math.random() * currentEnemies[i].length); j >= 0; j--) {
                 if (currentEnemies[i][j] != null) {
                     alienBomb.setPosition(currentEnemies[i][j].getPositionX(),
                             currentEnemies[i][j].getPositionY());
+                    alienBomb.setVelocity(0, 350);
+                    alienBombs.add(alienBomb);
                     PLAYER_SHOT = true;
                     break;
                 }
             }
         }
-        alienBomb.setVelocity(0, 350);
-        alienBombs.add(alienBomb);
     }
 
     private boolean playerHit(Sprite bomb) {
@@ -564,11 +610,28 @@ public class SpaceInvadersFX extends Application {
 
     private void updatePlayerLives() {
         playerLives--;
-        if (playerLives == 2 && LIFE_END) {
+        if (playerLives == 2) {
             gc.clearRect(SCENE_WIDTH + 4 * SPACE, 10, APP_WIDTH, 20);
-        } else if (playerLives == 1 && LIFE_END) {
+        } else if (playerLives == 1) {
             gc.clearRect(SCENE_WIDTH + 3 * SPACE, 10, APP_WIDTH, 20);
         }
+    }
+
+    private void startNewGame() {
+        resetGameVariables();
+        spawnEnemies();
+        setMovedEnemies();
+        updateCurrentEnemies();
+        setBarriers();
+        setPlayer();
+        startGame();
+    }
+
+    private void restartGame() {
+        timer.stop();
+        updatePlayerLives();
+        resetGameVariables();
+        startGame();
     }
 
     private void resetGameVariables() {
@@ -576,8 +639,14 @@ public class SpaceInvadersFX extends Application {
         coordinateY = 80;
         coordinateX = APP_WIDTH/3 - (SPACE*3);
         LIFE_END = false;
-        SHIFTING_DOWN = false;
         SHIFTING_LEFT = false;
+        PLAYER_SHOT = false;
+        MISSILE_LAUNCHED = false;
+        UFO_SPAWNED = false;
+        EXPLOSION = false;
+        missiles.clear();
+        alienBombs.clear();
+        UFO = null;
     }
 
     private void setSoundEffects() {
@@ -589,7 +658,6 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void setAlienMoveSounds() {
-        moveEffects = new ArrayList<>();
         moveEffects.add(new SoundEffect("/sounds/alienMove.wav"));
         moveEffects.add(new SoundEffect("/sounds/alienMove2.wav"));
         moveEffects.add(new SoundEffect("/sounds/alienMove3.wav"));
