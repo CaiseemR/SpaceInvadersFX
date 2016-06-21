@@ -23,7 +23,7 @@ public class SpaceInvadersFX extends Application {
     private Sprite[][] enemies = new Sprite[5][13];
     private Sprite[][] enemiesMoved = new Sprite[5][13];
     private Sprite[][] currentEnemies;
-    private int[] coordinates = new int[]{80, 95, 120, 180, 200, 250, 280, 310, 340};
+    private int[] coordinates = new int[]{80, 120, 180, 200, 250, 280, 310, 340};
     private int SCENE_WIDTH = 600;
     private int APP_HEIGHT = 600;
     private int APP_WIDTH = 800;
@@ -204,11 +204,11 @@ public class SpaceInvadersFX extends Application {
 
     private void renderBarrier(int startingX, Barrier barrier, int[][] barrierMatrix, Group group) {
         barrier.setLocationX(startingX);
-        barrier.setLocationY(APP_HEIGHT-100);
+        barrier.setLocationY(APP_HEIGHT-150);
         barriers.add(barrier);
         group.getChildren().clear();
 
-        for (int i = 0, y = APP_HEIGHT - 100; i < barrierMatrix.length; i++, y += rectangleSize) {
+        for (int i = 0, y = APP_HEIGHT - 150; i < barrierMatrix.length; i++, y += rectangleSize) {
             for (int j = 0, x = startingX; j < barrierMatrix[0].length && x <= SCENE_WIDTH + SPACE; j++, x += rectangleSize) {
                 if (barrierMatrix[i][j] != 0) {
                     Rectangle rect = new Rectangle();
@@ -315,8 +315,8 @@ public class SpaceInvadersFX extends Application {
                 }
 
                 if (UFO_SPAWNED) {
-                    ufoTime += 0.010;
-                    if (ufoTime >= 0.10) {
+                    ufoTime += 0.013;
+                    if (ufoTime >= 0.140) {
                         ufoEffect.playClip();
                         ufoTime = 0;
                     }
@@ -338,7 +338,7 @@ public class SpaceInvadersFX extends Application {
     private void checkLastAlienStatus() {
         if (lastAlien != null) {
             lastAlienPosY = lastAlien.getPositionY();
-            if (lastAlienPosY >= APP_HEIGHT - 100 - lastAlien.getHeight()) {
+            if (lastAlienPosY >= APP_HEIGHT - 150 - lastAlien.getHeight()) {
                 restartGame();
             }
         }
