@@ -74,6 +74,7 @@ public class SpaceInvadersFX extends Application {
         updateCurrentEnemies();
         setBarriers();
         setPlayer();
+        setInitialLives();
         setSoundEffects();
         startGame();
 
@@ -226,7 +227,9 @@ public class SpaceInvadersFX extends Application {
         tank.setImage("/images/tank.png");
         tank.setPosition(APP_WIDTH/2 - SPACE/2, APP_HEIGHT - SPACE);
         tank.render(gc);
+    }
 
+    private void setInitialLives() {
         secondTank = new Sprite();
         secondTank.setImage("/images/tank.png");
         secondTank.setPosition(SCENE_WIDTH + 3 * SPACE, 10);
