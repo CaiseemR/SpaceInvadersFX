@@ -45,7 +45,10 @@ public class SpaceInvadersFX extends Application {
     private LongValue startNanoTime;
     private AnimationTimer timer;
     private SoundEffect ufoEffect, shootEffect, killEffect, explosionEffect;
-    private Group barrierGroup, secondBarrier, thirdBarrier, fourthBarrier;
+    private Group barrierGroup = new Group();
+    private Group secondBarrier = new Group();
+    private Group thirdBarrier = new Group();
+    private Group fourthBarrier = new Group();
     private ArrayList<Barrier> barriers = new ArrayList<>();
     private ArrayList<Sprite> missiles = new ArrayList<>();
     private ArrayList<Sprite> alienBombs = new ArrayList<>();
@@ -67,8 +70,11 @@ public class SpaceInvadersFX extends Application {
 
         Scene mainScene = new Scene(root);
         mainScene.setFill(Color.BLACK);
-
         setGUI();
+
+        root.getChildren().addAll(gameCanvas, scoreLabel, pointsLabel, playerLivesLabel,
+                barrierGroup, secondBarrier, thirdBarrier, fourthBarrier);
+
         spawnEnemies();
         setMovedEnemies();
         updateCurrentEnemies();
@@ -77,9 +83,6 @@ public class SpaceInvadersFX extends Application {
         setInitialLives();
         setSoundEffects();
         startGame();
-
-        root.getChildren().addAll(gameCanvas, scoreLabel, pointsLabel, playerLivesLabel,
-                barrierGroup, secondBarrier, thirdBarrier, fourthBarrier);
 
         primaryStage.setScene(mainScene);
         primaryStage.getScene().setOnKeyPressed(e -> {
@@ -189,11 +192,6 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void setBarriers() {
-        barrierGroup = new Group();
-        secondBarrier = new Group();
-        thirdBarrier = new Group();
-        fourthBarrier = new Group();
-
         for (int x = 180, i = 0; x < SCENE_WIDTH; x += 3*SPACE, i++) {
             Barrier barrier = new Barrier();
             int[][] barrierMatrix = barrier.getBarrier();
@@ -634,6 +632,7 @@ public class SpaceInvadersFX extends Application {
         spawnEnemies();
         setMovedEnemies();
         updateCurrentEnemies();
+        barriers.clear();
         setBarriers();
         setPlayer();
         startGame();
