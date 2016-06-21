@@ -3,6 +3,7 @@ package com.tonyjs.spaceinvadersfx;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 
 /**
  * Created by tonysaavedra on 6/17/16.
@@ -32,6 +33,12 @@ public class Sprite {
     public void setImage(String filename) {
         Image i = new Image(filename);
         Image toReturn = new Image(filename, i.getWidth()/3, i.getHeight()/3, true, false);
+        setImage(toReturn);
+    }
+
+    public void setImage(boolean gif, String filename) {
+        ImageView i = new ImageView(new Image(filename));
+        Image toReturn = new Image(filename);
         setImage(toReturn);
     }
 

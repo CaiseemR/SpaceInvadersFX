@@ -36,7 +36,7 @@ public class SpaceInvadersFX extends Application {
     private int currentMoveSound = 0;
     private Text playerLivesLabel, scoreLabel, pointsLabel;
     private GraphicsContext gc;
-    private Sprite tank, secondTank, thirdTank, lastAlien, UFO;
+    private Sprite tank, secondTank, thirdTank, lastAlien, UFO, explosion;
     private ArrayList<Sprite> missiles = new ArrayList<>();
     private ArrayList<Sprite> alienBombs = new ArrayList<>();
     private ArrayList<SoundEffect> moveEffects;
@@ -45,12 +45,11 @@ public class SpaceInvadersFX extends Application {
     private double ufoTime = 0.40;
     private boolean GAME_IS_PAUSED = false;
     private boolean SHIFTING_RIGHT, SHIFTING_LEFT, SHIFTING_DOWN, PLAYER_SHOT,
-            GAME_OVER, GAME_IS_WON, LIFE_END, UFO_SPAWNED, MISSILE_LAUNCHED;
+            GAME_OVER, GAME_IS_WON, LIFE_END, UFO_SPAWNED, MISSILE_LAUNCHED, EXPLOSION;
     private LongValue startNanoTime;
-    private double elapsedTime, pos;
+    private double elapsedTime, explosionTime, pos;
     private AnimationTimer timer;
-    private SoundEffect ufoEffect, alienMoveEffect,
-            shootEffect, killEffect, explosionEffect;
+    private SoundEffect ufoEffect, shootEffect, killEffect, explosionEffect;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -234,7 +233,9 @@ public class SpaceInvadersFX extends Application {
                 gc.clearRect(0, 30, APP_WIDTH, APP_HEIGHT);
 
                 renderBarriers();
-
+                if (explosion != null) {
+                    explosion.render(gc);
+                }
                 lastAlien = getLastAlien();
 
                 checkLastAlienStatus();
@@ -283,6 +284,15 @@ public class SpaceInvadersFX extends Application {
                     updateCurrentEnemies();
                     shootPlayer();
                     time = 0;
+                }
+
+                if (EXPLOSION) {
+                    explosionTime += 0.020;
+                    if (explosionTime >= .50) {
+                        EXPLOSION = false;
+                        explosion = null;
+                        explosionTime = 0;
+                    }
                 }
 
                 if (UFO_SPAWNED) {
@@ -345,6 +355,7 @@ public class SpaceInvadersFX extends Application {
             UFO.update(elapsedTime);
             if (MISSILE_LAUNCHED) {
                 if (UFO.intersects(missiles.get(0))) {
+                    setExplosion(UFO);
                     explosionEffect.playClip();
                     score += 100;
                     updateTotalScore();
@@ -392,6 +403,7 @@ public class SpaceInvadersFX extends Application {
     private boolean bombsCollide(Sprite bomb) {
         if (missiles.size() > 0) {
             if (bomb.intersects(missiles.get(0))) {
+                setExplosion(bomb);
                 killEffect.playClip();
                 missiles.clear();
                 MISSILE_LAUNCHED = false;
@@ -482,6 +494,8 @@ public class SpaceInvadersFX extends Application {
                                 score += 30;
                                 break;
                         }
+                        setExplosion(currentEnemies[i][j]);
+                        explosion.render(gc);
                         killEffect.playClip();
                         updateTotalScore();
                         totalEnemies--;
@@ -527,11 +541,21 @@ public class SpaceInvadersFX extends Application {
 
     private boolean playerHit(Sprite bomb) {
         if (tank.intersects(bomb)) {
+            setExplosion(tank);
+            explosion.render(gc);
             explosionEffect.playClip();
             LIFE_END = true;
             return true;
         }
         return false;
+    }
+
+    private void setExplosion(Sprite victim) {
+        EXPLOSION = true;
+        explosion = new Sprite();
+        explosion.setImage(true, "/images/explosion.gif");
+        explosion.setPosition(victim.getPositionX() - 10, victim.getPositionY() - 10);
+        explosion.render(gc);
     }
 
     private void updateTotalScore() {
