@@ -37,7 +37,7 @@ public class SpaceInvadersFX extends Application {
     private int rectangleSize = 8;
     private double time = 0.40;
     private double ufoTime = 0.40;
-    private double elapsedTime, explosionTime, lastAlienPosY;
+    private double elapsedTime, explosionTime, restartTime, lastAlienPosY;
     private Text playerLivesLabel, scoreLabel, pointsLabel;
     private GraphicsContext gc;
     private Sprite tank, secondTank, thirdTank, lastAlien, UFO, explosion;
@@ -84,10 +84,10 @@ public class SpaceInvadersFX extends Application {
         primaryStage.setScene(mainScene);
         primaryStage.getScene().setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.LEFT) {
-                if (tank.getPositionX() > 50 && !GAME_IS_PAUSED) {
+                if (!LIFE_END && tank.getPositionX() > 50 && !GAME_IS_PAUSED) {
                     moveTankLeft();
                 }
-            } else if (e.getCode() == KeyCode.RIGHT) {
+            } else if (!LIFE_END && e.getCode() == KeyCode.RIGHT) {
                 if (tank.getPositionX() < APP_WIDTH - 100 && !GAME_IS_PAUSED) {
                     moveTankRight();
                 }
@@ -102,13 +102,13 @@ public class SpaceInvadersFX extends Application {
         });
 
         primaryStage.getScene().setOnKeyReleased(e -> {
-            if (e.getCode() == KeyCode.UP && !MISSILE_LAUNCHED) {
+            if (!LIFE_END && e.getCode() == KeyCode.UP && !MISSILE_LAUNCHED) {
                 shootEffect.playClip();
                 shootMissile();
                 MISSILE_LAUNCHED = true;
-            } else if (e.getCode() == KeyCode.LEFT) {
+            } else if (!LIFE_END && e.getCode() == KeyCode.LEFT) {
                 tank.setVelocity(0, 0);
-            } else if (e.getCode() == KeyCode.RIGHT) {
+            } else if (!LIFE_END && e.getCode() == KeyCode.RIGHT) {
                 tank.setVelocity(0, 0);
             }
         });
@@ -268,7 +268,7 @@ public class SpaceInvadersFX extends Application {
                 int timeDiff = updateTime();
                 time += timeDiff >= 0 ? 0.010 + (.005 * timeDiff) : 0.10;
 
-                if (time >= 0.5) {
+                if (time >= 0.5 && !LIFE_END) {
                     playMoveEffect();
                     if (SHIFTING_RIGHT) {
                         if (coordinateX < 210) {
@@ -321,6 +321,14 @@ public class SpaceInvadersFX extends Application {
                         ufoTime = 0;
                     }
                 }
+
+                if (LIFE_END && playerLives > 1) {
+                    restartTime += 0.010;
+                    if (restartTime >= 0.50) {
+                        restartTime = 0;
+                        restartGame();
+                    }
+                }
             }
         };
         timer.start();
@@ -339,22 +347,24 @@ public class SpaceInvadersFX extends Application {
         if (lastAlien != null) {
             lastAlienPosY = lastAlien.getPositionY();
             if (lastAlienPosY >= APP_HEIGHT - 150 - lastAlien.getHeight()) {
-                restartGame();
+                relocateEnemies();
             }
         }
     }
 
     private void checkTankStatus() {
-        if (tank.getPositionX() < 50) {
-            tank.setPosition(tank.getPositionX() + 1, tank.getPositionY());
-            tank.setVelocity(0, 0);
-        } else if (tank.getPositionX() > APP_WIDTH - 100) {
-            tank.setPosition(tank.getPositionX() - 1, tank.getPositionY());
-            tank.setVelocity(0, 0);
-        }
+        if (tank != null) {
+            if (tank.getPositionX() < 50) {
+                tank.setPosition(tank.getPositionX() + 1, tank.getPositionY());
+                tank.setVelocity(0, 0);
+            } else if (tank.getPositionX() > APP_WIDTH - 100) {
+                tank.setPosition(tank.getPositionX() - 1, tank.getPositionY());
+                tank.setVelocity(0, 0);
+            }
 
-        tank.render(gc);
-        tank.update(elapsedTime);
+            tank.render(gc);
+            tank.update(elapsedTime);
+        }
     }
 
     private void tryToSpawnUFO() {
@@ -414,12 +424,7 @@ public class SpaceInvadersFX extends Application {
                 PLAYER_SHOT = false;
             }
             if (playerHit(bomb)) {
-                timer.stop();
-                if (playerLives > 1) {
-                    restartGame();
-                } else {
-                    System.exit(0);
-                }
+                LIFE_END = true;
             }
         }
     }
@@ -589,10 +594,11 @@ public class SpaceInvadersFX extends Application {
     }
 
     private boolean playerHit(Sprite bomb) {
-        if (tank.intersects(bomb)) {
+        if (tank != null && tank.intersects(bomb)) {
             setExplosion(tank);
             explosion.render(gc);
             explosionEffect.playClip();
+            tank = null;
             LIFE_END = true;
             return true;
         }
@@ -621,6 +627,9 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void startNewGame() {
+        timer.stop();
+        coordinateY = 80;
+        coordinateX = APP_WIDTH/3 - (SPACE*3);
         resetGameVariables();
         spawnEnemies();
         setMovedEnemies();
@@ -630,8 +639,19 @@ public class SpaceInvadersFX extends Application {
         startGame();
     }
 
+    private void relocateEnemies() {
+        timer.stop();
+        coordinateY = 80;
+        coordinateX = APP_WIDTH/3 - (SPACE*3);
+        setPlayer();
+        updatePlayerLives();
+        resetGameVariables();
+        startGame();
+    }
+
     private void restartGame() {
         timer.stop();
+        setPlayer();
         updatePlayerLives();
         resetGameVariables();
         startGame();
@@ -639,8 +659,6 @@ public class SpaceInvadersFX extends Application {
 
     private void resetGameVariables() {
         time = 0;
-        coordinateY = 80;
-        coordinateX = APP_WIDTH/3 - (SPACE*3);
         LIFE_END = false;
         SHIFTING_LEFT = false;
         PLAYER_SHOT = false;
