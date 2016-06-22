@@ -71,6 +71,7 @@ public class MainApp extends Application {
         scene.setFill(Color.BLACK);
         primaryStage.setTitle("Space Invaders -- Main Menu");
         primaryStage.setScene(scene);
+        primaryStage.setResizable(false);
         primaryStage.show();
     }
 
