@@ -38,6 +38,8 @@ public class SpaceInvadersFX extends Application {
     private int rectangleSize = 8;
     private double time = 0.40;
     private double ufoTime = 0.40;
+    double maxShiftLeft = 0;
+    double maxShiftRight = 0;
     private double elapsedTime, explosionTime, restartTime, lastAlienPosY;
     private Text playerLivesLabel, scoreLabel, pointsLabel, gameOverLabel;
     private GraphicsContext gc;
@@ -278,18 +280,15 @@ public class SpaceInvadersFX extends Application {
                 checkMissileStatus();
                 checkBombStatus();
                 checkTankStatus();
+                getMaxShiftSpace();
 
                 time += 1/(totalEnemies * 1.0);
 
                 if (time >= 1.5 && !LIFE_END) {
                     playMoveEffect();
                     if (SHIFTING_RIGHT) {
-                        if (coordinateX < 210) {
-                            if (coordinateY <= 320) {
-                                coordinateX += 10;
-                            } else {
-                                coordinateX += 20;
-                            }
+                        if (maxShiftRight < 640) {
+                            coordinateX += 10;
                         } else {
                             if (!SHIFTING_LEFT) {
                                 coordinateY += 15;
@@ -298,12 +297,8 @@ public class SpaceInvadersFX extends Application {
                             }
                         }
                     } else if (SHIFTING_LEFT ) {
-                        if (coordinateX > 80) {
-                            if (coordinateY <= 320) {
-                                coordinateX -= 10;
-                            } else {
-                                coordinateX -= 20;
-                            }
+                        if (maxShiftLeft > 80) {
+                            coordinateX -= 10;
                         } else {
                             if (!SHIFTING_RIGHT) {
                                 coordinateY += 15;
@@ -350,7 +345,7 @@ public class SpaceInvadersFX extends Application {
         };
         timer.start();
     }
-    
+
     private void checkLastAlienStatus() {
         if (lastAlien != null) {
             lastAlienPosY = lastAlien.getPositionY();
@@ -358,6 +353,38 @@ public class SpaceInvadersFX extends Application {
                 relocateEnemies();
             }
         }
+    }
+
+    private void getMaxShiftSpace() {
+        boolean left = false;
+        boolean right = false;
+        //looking at the far left side
+        for (int i = 0; i < currentEnemies.length; i++) {
+            if (left) {
+                break;
+            }
+            for (int j = 0; j < currentEnemies[0].length; j++) {
+                if (currentEnemies[i][j] != null) {
+                    maxShiftLeft = currentEnemies[i][j].getPositionX();
+                    left = true;
+                    break;
+                }
+            }
+        }
+        //looking at the far right side
+        for (int i = 0; i < currentEnemies.length; i++) {
+            if (right) {
+                break;
+            }
+            for (int j = currentEnemies[0].length-1; j >= 0; j--) {
+                if (currentEnemies[i][j] != null) {
+                    maxShiftRight = currentEnemies[i][j].getPositionX();
+                    right = true;
+                    break;
+                }
+            }
+        }
+
     }
 
     private void checkTankStatus() {
