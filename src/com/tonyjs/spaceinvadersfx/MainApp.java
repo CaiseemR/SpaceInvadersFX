@@ -69,7 +69,7 @@ public class MainApp extends Application {
     public void start(Stage primaryStage) throws Exception {
         Scene scene = new Scene(createContent());
         scene.setFill(Color.BLACK);
-        primaryStage.setTitle("Space Invaders -- Main Menu");
+        primaryStage.setTitle("Space Invaders");
         primaryStage.setScene(scene);
         primaryStage.setResizable(false);
         primaryStage.show();

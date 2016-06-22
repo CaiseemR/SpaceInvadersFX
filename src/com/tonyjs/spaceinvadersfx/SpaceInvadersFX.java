@@ -667,7 +667,7 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void removeGameOverItems() {
-        if (playerLives < 1) {
+        if (playerLives <= 1) {
             resetPlayerStatus();
         }
         root.getChildren().remove(gameOverLabel);
