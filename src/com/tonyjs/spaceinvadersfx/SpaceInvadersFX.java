@@ -80,6 +80,7 @@ public class SpaceInvadersFX extends Application {
 
         root.getChildren().addAll(gameCanvas, scoreLabel, pointsLabel, playerLivesLabel,
                 barrierGroup, secondBarrier, thirdBarrier, fourthBarrier);
+        SHIFTING_RIGHT = true;
 
         spawnEnemies();
         setMovedEnemies();
@@ -100,7 +101,7 @@ public class SpaceInvadersFX extends Application {
                 if (tank.getPositionX() < APP_WIDTH - 100 && !GAME_IS_PAUSED) {
                     moveTankRight();
                 }
-            } else if (e.getCode() == KeyCode.SPACE) {
+            } else if (e.getCode() == KeyCode.ESCAPE) {
                 GAME_IS_PAUSED = !GAME_IS_PAUSED;
                 if (GAME_IS_PAUSED) {
                     timer.stop();
@@ -111,7 +112,7 @@ public class SpaceInvadersFX extends Application {
         });
 
         primaryStage.getScene().setOnKeyReleased(e -> {
-            if (!LIFE_END && e.getCode() == KeyCode.UP && !MISSILE_LAUNCHED) {
+            if (!LIFE_END && e.getCode() == KeyCode.SPACE && !MISSILE_LAUNCHED) {
                 shootEffect.playClip();
                 shootMissile();
                 MISSILE_LAUNCHED = true;
@@ -252,7 +253,6 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void startGame() {
-        SHIFTING_RIGHT = true;
         startNanoTime = new LongValue(System.nanoTime());
 
         timer = new AnimationTimer() {
@@ -278,7 +278,7 @@ public class SpaceInvadersFX extends Application {
 
                 time += 1/(totalEnemies * 1.0);
 
-                if (time >= 1.5 && !LIFE_END) {
+                if (time >= 1.5 && playerLives >= 0 && !LIFE_END) {
                     playMoveEffect();
                     if (SHIFTING_RIGHT) {
                         if (maxShiftRight < 640) {
@@ -317,13 +317,13 @@ public class SpaceInvadersFX extends Application {
                     }
                 }
 
-                if (LIFE_END && playerLives > 1) {
+                if (LIFE_END && playerLives > 0) {
                     restartTime += 0.010;
                     if (restartTime >= 0.70) {
                         restartTime = 0;
                         restartGame();
                     }
-                } else if (LIFE_END && playerLives <= 1) {
+                } else if (LIFE_END && playerLives == 0) {
                     timer.stop();
                     root.getChildren().add(gameOverLabel);
                     root.getChildren().add(menuBox);
@@ -337,7 +337,9 @@ public class SpaceInvadersFX extends Application {
         if (lastAlien != null) {
             lastAlienPosY = lastAlien.getPositionY();
             if (lastAlienPosY >= APP_HEIGHT - 150 - lastAlien.getHeight()) {
-                relocateEnemies();
+                updatePlayerLives();
+                timer.stop();
+                startNewGame();
             }
         }
     }
@@ -617,6 +619,7 @@ public class SpaceInvadersFX extends Application {
 
     private boolean playerHit(Sprite bomb) {
         if (tank != null && tank.intersects(bomb)) {
+            updatePlayerLives();
             setExplosion(tank);
             explosion.render(gc);
             explosionEffect.playClip();
@@ -657,7 +660,9 @@ public class SpaceInvadersFX extends Application {
 
     private void startNewGame() {
         timer.stop();
-        removeGameOverItems();
+        if (playerLives < 1) {
+            removeGameOverItems();
+        }
         coordinateY = 80;
         coordinateX = APP_WIDTH/3 - (SPACE*3);
         resetGameVariables();
@@ -671,19 +676,15 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void removeGameOverItems() {
-        if (playerLives < 1) {
-            resetPlayerStatus();
-        }
+        resetPlayerStatus();
         root.getChildren().remove(gameOverLabel);
         root.getChildren().remove(menuBox);
     }
 
     private void relocateEnemies() {
-        timer.stop();
         coordinateY = 80;
         coordinateX = APP_WIDTH/3 - (SPACE*3);
         setPlayer();
-        updatePlayerLives();
         resetGameVariables();
         startGame();
     }
@@ -691,7 +692,6 @@ public class SpaceInvadersFX extends Application {
     private void restartGame() {
         timer.stop();
         setPlayer();
-        updatePlayerLives();
         resetGameVariables();
         startGame();
     }
