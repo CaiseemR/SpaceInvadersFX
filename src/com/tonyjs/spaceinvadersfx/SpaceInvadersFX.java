@@ -279,10 +279,9 @@ public class SpaceInvadersFX extends Application {
                 checkBombStatus();
                 checkTankStatus();
 
-                int timeDiff = updateTime();
-                time += timeDiff >= 0 ? 0.010 + (.005 * timeDiff) : 0.10;
+                time += 1/(totalEnemies * 1.0);
 
-                if (time >= 0.5 && !LIFE_END) {
+                if (time >= 1.5 && !LIFE_END) {
                     playMoveEffect();
                     if (SHIFTING_RIGHT) {
                         if (coordinateX < 210) {
@@ -351,16 +350,7 @@ public class SpaceInvadersFX extends Application {
         };
         timer.start();
     }
-
-    private int updateTime() {
-        for (int i = 0; i < coordinates.length; i++) {
-            if (coordinateY <= coordinates[i]) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
+    
     private void checkLastAlienStatus() {
         if (lastAlien != null) {
             lastAlienPosY = lastAlien.getPositionY();
