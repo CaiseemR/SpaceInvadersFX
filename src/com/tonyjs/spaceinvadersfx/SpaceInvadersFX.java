@@ -24,7 +24,6 @@ public class SpaceInvadersFX extends Application {
     private Sprite[][] enemies = new Sprite[5][13];
     private Sprite[][] enemiesMoved = new Sprite[5][13];
     private Sprite[][] currentEnemies;
-    private int[] coordinates = new int[]{80, 120, 180, 200, 250, 280, 310, 340};
     private int SCENE_WIDTH = 600;
     private int APP_HEIGHT = 600;
     private int APP_WIDTH = 800;
@@ -38,9 +37,10 @@ public class SpaceInvadersFX extends Application {
     private int rectangleSize = 8;
     private double time = 0.40;
     private double ufoTime = 0.40;
-    double maxShiftLeft = 0;
-    double maxShiftRight = 0;
-    private double elapsedTime, explosionTime, restartTime, lastAlienPosY;
+    private double elapsedTime, explosionTime, restartTime, lastAlienPosY,
+            maxShiftLeft, maxShiftRight;
+    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, PLAYER_SHOT, GAME_IS_WON,
+            GAME_IS_PAUSED, LIFE_END, UFO_SPAWNED, MISSILE_LAUNCHED, EXPLOSION;
     private Text playerLivesLabel, scoreLabel, pointsLabel, gameOverLabel;
     private GraphicsContext gc;
     private Sprite tank, secondTank, thirdTank, lastAlien, UFO, explosion;
@@ -56,9 +56,6 @@ public class SpaceInvadersFX extends Application {
     private ArrayList<Sprite> missiles = new ArrayList<>();
     private ArrayList<Sprite> alienBombs = new ArrayList<>();
     private ArrayList<SoundEffect> moveEffects = new ArrayList<>();
-    private boolean GAME_IS_PAUSED = false;
-    private boolean SHIFTING_RIGHT, SHIFTING_LEFT, PLAYER_SHOT, GAME_OVER,
-            GAME_IS_WON, LIFE_END, UFO_SPAWNED, MISSILE_LAUNCHED, EXPLOSION;
     private MenuBox menuBox;
     private Group root;
 
@@ -73,9 +70,7 @@ public class SpaceInvadersFX extends Application {
         });
 
         root = new Group();
-
         gameCanvas = new Canvas(APP_WIDTH, APP_HEIGHT);
-
         gc = gameCanvas.getGraphicsContext2D();
 
         Scene mainScene = new Scene(root);
@@ -271,7 +266,6 @@ public class SpaceInvadersFX extends Application {
                     explosion.render(gc);
                 }
 
-
                 lastAlien = getLastAlien();
                 checkLastAlienStatus();
                 animateEnemies();
@@ -288,24 +282,17 @@ public class SpaceInvadersFX extends Application {
                     playMoveEffect();
                     if (SHIFTING_RIGHT) {
                         if (maxShiftRight < 640) {
-                            coordinateX += 10;
+                            coordinateX += 15;
                         } else {
-                            if (!SHIFTING_LEFT) {
-                                coordinateY += 15;
-                                SHIFTING_LEFT = true;
-                                SHIFTING_RIGHT = false;
-                            }
+                            coordinateY += 15;
+                            SHIFTING_RIGHT = false;
                         }
-                    } else if (SHIFTING_LEFT ) {
+                    } else if (!SHIFTING_RIGHT) {
                         if (maxShiftLeft > 80) {
-                            coordinateX -= 10;
+                            coordinateX -= 15;
                         } else {
-                            if (!SHIFTING_RIGHT) {
-                                coordinateY += 15;
-                                SHIFTING_RIGHT = true;
-                                SHIFTING_LEFT = false;
-                            }
-
+                            coordinateY += 15;
+                            SHIFTING_RIGHT = true;
                         }
                     }
                     updateCurrentEnemies();
@@ -356,30 +343,30 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void getMaxShiftSpace() {
-        boolean left = false;
-        boolean right = false;
+        maxShiftLeft = 0.00;
+        maxShiftRight = 0.00;
         //looking at the far left side
         for (int i = 0; i < currentEnemies.length; i++) {
-            if (left) {
-                break;
-            }
             for (int j = 0; j < currentEnemies[0].length; j++) {
                 if (currentEnemies[i][j] != null) {
-                    maxShiftLeft = currentEnemies[i][j].getPositionX();
-                    left = true;
+                    if (maxShiftLeft > 0.00) {
+                        maxShiftLeft = Math.min(maxShiftLeft, currentEnemies[i][j].getPositionX());
+                    } else {
+                        maxShiftLeft = currentEnemies[i][j].getPositionX();
+                    }
                     break;
                 }
             }
         }
         //looking at the far right side
         for (int i = 0; i < currentEnemies.length; i++) {
-            if (right) {
-                break;
-            }
-            for (int j = currentEnemies[0].length-1; j >= 0; j--) {
+            for (int j = currentEnemies[0].length - 1; j >= 0; j--) {
                 if (currentEnemies[i][j] != null) {
-                    maxShiftRight = currentEnemies[i][j].getPositionX();
-                    right = true;
+                    if (maxShiftRight > 0.00) {
+                        maxShiftRight = Math.max(maxShiftRight, currentEnemies[i][j].getPositionX());
+                    } else {
+                        maxShiftRight = currentEnemies[i][j].getPositionX();
+                    }
                     break;
                 }
             }
@@ -684,7 +671,7 @@ public class SpaceInvadersFX extends Application {
     }
 
     private void removeGameOverItems() {
-        if (playerLives <= 1) {
+        if (playerLives < 1) {
             resetPlayerStatus();
         }
         root.getChildren().remove(gameOverLabel);
