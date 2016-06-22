@@ -2,6 +2,7 @@ package com.tonyjs.spaceinvadersfx;
 
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -38,7 +39,7 @@ public class SpaceInvadersFX extends Application {
     private double time = 0.40;
     private double ufoTime = 0.40;
     private double elapsedTime, explosionTime, restartTime, lastAlienPosY;
-    private Text playerLivesLabel, scoreLabel, pointsLabel;
+    private Text playerLivesLabel, scoreLabel, pointsLabel, gameOverLabel;
     private GraphicsContext gc;
     private Sprite tank, secondTank, thirdTank, lastAlien, UFO, explosion;
     private Canvas gameCanvas;
@@ -56,13 +57,20 @@ public class SpaceInvadersFX extends Application {
     private boolean GAME_IS_PAUSED = false;
     private boolean SHIFTING_RIGHT, SHIFTING_LEFT, PLAYER_SHOT, GAME_OVER,
             GAME_IS_WON, LIFE_END, UFO_SPAWNED, MISSILE_LAUNCHED, EXPLOSION;
+    private MenuBox menuBox;
+    private Group root;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("Space Invaders FX");
         primaryStage.setResizable(false);
+        primaryStage.setOnCloseRequest(e -> {
+            timer.stop();
+            MainApp.GAME_SET = false;
+            primaryStage.close();
+        });
 
-        Group root = new Group();
+        root = new Group();
 
         gameCanvas = new Canvas(APP_WIDTH, APP_HEIGHT);
 
@@ -71,6 +79,7 @@ public class SpaceInvadersFX extends Application {
         Scene mainScene = new Scene(root);
         mainScene.setFill(Color.BLACK);
         setGUI();
+        setMenuBox();
 
         root.getChildren().addAll(gameCanvas, scoreLabel, pointsLabel, playerLivesLabel,
                 barrierGroup, secondBarrier, thirdBarrier, fourthBarrier);
@@ -136,6 +145,12 @@ public class SpaceInvadersFX extends Application {
         pointsLabel.setFont(Font.font("Monaco", FontWeight.EXTRA_BOLD, 20));
         pointsLabel.setX(95);
         pointsLabel.setY(30);
+
+        gameOverLabel = new Text("GAME OVER");
+        gameOverLabel.setFill(Color.WHITE);
+        gameOverLabel.setFont(Font.font("Monaco", FontWeight.THIN, 30));
+        gameOverLabel.setX(APP_WIDTH/2 - 2*SPACE);
+        gameOverLabel.setY (30);
     }
 
     private void spawnEnemies() {
@@ -254,6 +269,7 @@ public class SpaceInvadersFX extends Application {
                     explosion.render(gc);
                 }
 
+
                 lastAlien = getLastAlien();
                 checkLastAlienStatus();
                 animateEnemies();
@@ -322,10 +338,14 @@ public class SpaceInvadersFX extends Application {
 
                 if (LIFE_END && playerLives > 1) {
                     restartTime += 0.010;
-                    if (restartTime >= 0.50) {
+                    if (restartTime >= 0.70) {
                         restartTime = 0;
                         restartGame();
                     }
+                } else if (LIFE_END && playerLives <= 1) {
+                    timer.stop();
+                    root.getChildren().add(gameOverLabel);
+                    root.getChildren().add(menuBox);
                 }
             }
         };
@@ -597,7 +617,6 @@ public class SpaceInvadersFX extends Application {
             explosion.render(gc);
             explosionEffect.playClip();
             tank = null;
-            LIFE_END = true;
             return true;
         }
         return false;
@@ -624,8 +643,17 @@ public class SpaceInvadersFX extends Application {
         }
     }
 
+    private void resetPlayerStatus() {
+        playerLives = 3;
+        score = 0;
+        updateTotalScore();
+        secondTank.render(gc);
+        thirdTank.render(gc);
+    }
+
     private void startNewGame() {
         timer.stop();
+        removeGameOverItems();
         coordinateY = 80;
         coordinateX = APP_WIDTH/3 - (SPACE*3);
         resetGameVariables();
@@ -636,6 +664,12 @@ public class SpaceInvadersFX extends Application {
         setBarriers();
         setPlayer();
         startGame();
+    }
+
+    private void removeGameOverItems() {
+        resetPlayerStatus();
+        root.getChildren().remove(gameOverLabel);
+        root.getChildren().remove(menuBox);
     }
 
     private void relocateEnemies() {
@@ -691,6 +725,21 @@ public class SpaceInvadersFX extends Application {
 
         moveEffects.get(currentMoveSound).playClip();
         currentMoveSound++;
+    }
+
+    public void setMenuBox() {
+        menuBox = new MenuBox(400, 100);
+        menuBox.setTranslateX(200);
+        menuBox.setTranslateY(300);
+
+        MenuItem startButton = new MenuItem("NEW GAME", 250);
+        startButton.setOnAction(() -> startNewGame());
+
+        MenuItem quitGame = new MenuItem("QUIT", 250);
+        quitGame.setOnAction(() -> {
+            System.exit(0);
+        });
+        menuBox.addItems(startButton, quitGame);
     }
 
     public class LongValue {
