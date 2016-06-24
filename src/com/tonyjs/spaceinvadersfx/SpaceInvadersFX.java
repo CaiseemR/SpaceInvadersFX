@@ -155,13 +155,13 @@ public class SpaceInvadersFX extends Application {
         for (int y = 80, i = 0; y < APP_HEIGHT / 2 + SPACE && i < 5; y += SPACE, i++) {
             for (int x = APP_WIDTH/3 - (SPACE*3), j = 0; x < 660 && j < 13; x += SPACE, j++) {
                 if (y < 90) {
-                    enemies[i][j] = spawnSmallAlien(x, y, "/images/small_invader_a.png");
+                    enemies[i][j] = spawnAlien(x, y, "/images/small_invader_a.png");
                     gc.drawImage(enemies[i][j].getImage(), x, y);
                 } else if (y < 200) {
-                    enemies[i][j] = spawnMediumAlien(x, y, "/images/medium_invader_a.png");
+                    enemies[i][j] = spawnAlien(x, y, "/images/medium_invader_a.png");
                     gc.drawImage(enemies[i][j].getImage(), x, y);
                 } else {
-                    enemies[i][j] = spawnLargeAlien(x, y, "/images/large_invader_a.png");
+                    enemies[i][j] = spawnAlien(x, y, "/images/large_invader_a.png");
                     gc.drawImage(enemies[i][j].getImage(), x, y);
                 }
                 totalEnemies++;
@@ -173,35 +173,21 @@ public class SpaceInvadersFX extends Application {
         for (int y = 80, i = 0; y < APP_HEIGHT / 2 + SPACE && i < 5; y += SPACE, i++) {
             for (int x = APP_WIDTH/3 - (SPACE*3), j = 0; x < 660 && j < 13; x += SPACE, j++) {
                 if (y < 90) {
-                    enemiesMoved[i][j] = spawnSmallAlien(x, y, "/images/small_invader_b.png");
+                    enemiesMoved[i][j] = spawnAlien(x, y, "/images/small_invader_b.png");
                 } else if (y < 200) {
-                    enemiesMoved[i][j] = spawnMediumAlien(x, y, "/images/medium_invader_b.png");
+                    enemiesMoved[i][j] = spawnAlien(x, y, "/images/medium_invader_b.png");
                 } else {
-                    enemiesMoved[i][j] = spawnLargeAlien(x, y, "/images/large_invader_b.png");
+                    enemiesMoved[i][j] = spawnAlien(x, y, "/images/large_invader_b.png");
                 }
             }
         }
     }
 
-    private Sprite spawnSmallAlien(int x, int y, String imagePath) {
+    private Sprite spawnAlien(int x, int y, String imagePath) {
         Sprite smallAlien = new Sprite();
         smallAlien.setImage(imagePath);
         smallAlien.setPosition(x, y);
         return smallAlien;
-    }
-
-    private Sprite spawnMediumAlien(int x, int y, String imagePath) {
-        Sprite mediumAlien = new Sprite();
-        mediumAlien.setImage(imagePath);
-        mediumAlien.setPosition(x, y);
-        return mediumAlien;
-    }
-
-    private Sprite spawnLargeAlien(int x, int y, String imagePath) {
-        Sprite largeAlien = new Sprite();
-        largeAlien.setImage(imagePath);
-        largeAlien.setPosition(x, y);
-        return largeAlien;
     }
 
     private void setBarriers() {
